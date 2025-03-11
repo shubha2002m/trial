@@ -30,6 +30,20 @@ app.get('/products', async (req, res) => {
     }
 });
 
+app.get('/products/:id', async (req, res) => {
+    try {
+      const productId = req.params.id; // Get the product ID from the URL params
+      const product = await Product.findById(productId);
+  
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });  // 404 if product not found
+      }
+  
+      res.status(200).json(product);  // 200 and return the product if found
+    } catch (error) {
+      res.status(500).json({ message: 'Server error', error: error.message });  // 500 if server error
+    }
+  });
 // Add product
 app.post('/products', async (req, res) => {
     try {
@@ -48,19 +62,25 @@ app.post('/products', async (req, res) => {
 });
 
 // Update product
-app.patch('/products/:id', async (req, res) => {
+app.patch('/products/:id', async (req, res) => { 
     try {
         const { id } = req.params;
         const { name, description, quantity } = req.body;
 
-        if (!name && !description && quantity === undefined) {
+        // Create an object to store the updates
+        const updates = {};
+
+        // Add only the fields that are provided in the request body
+        if (name !== undefined) updates.name = name;
+        if (description !== undefined) updates.description = description;
+        if (quantity !== undefined) updates.quantity = quantity;
+
+        // If no fields are provided to update, return a 400 status
+        if (Object.keys(updates).length === 0) {
             return res.status(400).json({ error: 'At least one field (name, description, quantity) is required to update' });
         }
 
-        const updates = { name, description, quantity };
-        // Remove any undefined values (to avoid updating with null or undefined values)
-        Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
-
+        // Find and update the product
         const product = await Product.findByIdAndUpdate(id, updates, { new: true });
         if (!product) {
             return res.status(404).json({ error: 'Product not found' });
@@ -71,6 +91,7 @@ app.patch('/products/:id', async (req, res) => {
         res.status(500).json({ error: 'Failed to update product' });
     }
 });
+
 
 // Delete product
 app.delete('/products/:id', async (req, res) => {
